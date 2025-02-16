@@ -1,17 +1,27 @@
-const db = require("../db/database");
-const bcrypt = require("bcryptjs");
+const sqlite3 = require("sqlite3").verbose();
+const db = new sqlite3.Database("./db/database.sqlite");
 
-class User {
-  static create(name, email, password, callback) {
-    const hashedPassword = bcrypt.hashSync(password, 10); // Hash the password
-    const sql = `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
-    db.run(sql, [name, email, hashedPassword], callback);
-  }
+const User = {
+  findByEmail: (email, callback) => {
+    db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
+      callback(err, row);
+    });
+  },
 
-  static findByEmail(email, callback) {
-    const sql = `SELECT * FROM users WHERE email = ?`;
-    db.get(sql, [email], callback);
-  }
-}
+  create: (user, callback) => {
+    const { name, email, password } = user;
+    db.run(
+      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+      [name, email, password],
+      function (err) {
+        if (err) {
+          callback(err, null);
+        } else {
+          callback(null, { id: this.lastID, ...user });
+        }
+      }
+    );
+  },
+};
 
 module.exports = User;
